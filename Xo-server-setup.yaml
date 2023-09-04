@@ -1,0 +1,102 @@
+---
+apt::sources:
+  'dl.yarnpkg.com':
+    location: 'https://dl.yarnpkg.com/debian/'
+    release: 'stable'
+    repos: 'main'
+    key:
+      'id': '72ECF46A56B4AD39C907BBB71646B01B86E50310'
+      'server': 'https://dl.yarnpkg.com/debian/pubkey.gpg'
+
+
+archivpackages:
+  '/tmp/node-v18.16.0-linux-x64.tar.xz':
+    ensure: present
+    user: root
+    group: root
+    extract: true
+    source: 'https://nodejs.org/dist/v18.16.0/node-v18.16.0-linux-x64.tar.xz'
+    extract_command: 'tar -xJf %s --strip-components=1'
+    extract_path: '/usr/local'
+    cleanup: false
+vcsrepo:
+  '/opt/xen-orchestra': 
+    ensure: present
+    provider: git
+    source: 'https://github.com/vatesfr/xen-orchestra'    
+
+
+package:
+  'yarn':
+    ensure: 'installed'
+  'build-essential':
+    ensure: 'installed'
+  'redis-server':
+    ensure: 'installed'
+  'libpng-dev':
+    ensure: 'installed'
+  'git':
+    ensure: 'installed'
+  'python3-minimal':
+    ensure: 'installed'
+  'libvhdi-utils':
+    ensure: 'installed'
+  'lvm2':
+    ensure: 'installed'
+  'cifs-utils':
+    ensure: 'installed'
+      
+file:
+  '/.config':
+      owner: root
+      group: root
+      ensure: directory
+  '/.config/xo-server':
+    owner: root
+    group: root
+    ensure: directory
+  '/.config/xo-server/config.toml':
+    ensure: present
+    source: '/opt/xen-orchestra/packages/xo-server/sample.config.toml'
+  ####################
+#   systemd units
+##  ##################
+'systemd::unit_file':
+  'xo-server.service':
+    ensure: 'present'
+    enable: true
+    content: |
+      [Unit]
+      Description= XO Server
+      After=network-online.target    
+
+      [Service]
+      WorkingDirectory=/opt/xen-orchestra/packages/xo-server/
+      ExecStart=/usr/local/bin/node ./dist/cli.mjs    
+
+      Restart=always
+      SyslogIdentifier=xo-server    
+
+      [Install]
+      WantedBy=multi-user.target
+
+exec:
+  'yarn-dep':
+    cwd: /opt/xen-orchestra/
+    user: root
+    command: '/usr/bin/yarn'
+    onlyif: '/usr/bin/test -d /opt/xen-orchestra'   
+    path: '/sbin:/bin:/usr/sbin:/usr/bin:/opt/puppetlabs/bin/'
+
+  'yarn-build':
+    cwd: /opt/xen-orchestra/
+    user: root
+    command: '/usr/bin/yarn build'
+    onlyif: '/usr/bin/test -d /opt/xen-orchestra' 
+    path: '/sbin:/bin:/usr/sbin:/usr/bin:/opt/puppetlabs/bin/'
+
+  service:
+    'xo-server':
+      ensure: 'running'
+      enable: true
+     
